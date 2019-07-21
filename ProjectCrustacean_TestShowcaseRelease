@@ -1,0 +1,143 @@
+function NewCrabDevice(parent,CF)
+	local o1 = Instance.new("Part")
+	local o2 = Instance.new("SpecialMesh")
+	o1.Name = "CBDove_CrabDevice"
+	o1.Reflectance = 0.25
+	o1.Anchored = true
+	o1.CanCollide = false
+	o1.BrickColor = BrickColor.new("Medium stone grey")
+	o1.Size = Vector3.new(2, 1, 2)
+	o1.CFrame = CF or CFrame.new(0,0.5,0)
+	o1.BottomSurface = Enum.SurfaceType.Smooth
+	o1.TopSurface = Enum.SurfaceType.Smooth
+	o2.Parent = o1
+	o2.MeshId = "http://www.roblox.com/asset/?id=471840968"
+	o2.Offset = Vector3.new(0, -0.03125, 0)
+	o2.Scale = Vector3.new(2, 2, 2)
+	o2.TextureId = ""
+	o2.VertexColor = Vector3.new(1, 1, 1)
+	o2.MeshType = Enum.MeshType.FileMesh
+	o2.Scale = Vector3.new(2, 2, 2)
+	o1.Parent = parent
+	return o1
+end
+local Players = game:GetService("Players")
+local OwnerObject = Instance.new("ObjectValue")
+local BuildVersion = "Test Showcase Release"
+local Chat = game:GetService("Chat")
+local CrabDevice = NewCrabDevice(script)
+local MessageIncoming = Instance.new("BindableEvent",CrabDevice)
+MessageIncoming.Name = "MessageIncoming"
+local MessageReceived = Instance.new("BindableEvent",CrabDevice)
+MessageReceived.Name = "MessageReceived"
+local SendMessage = Instance.new("BindableFunction",CrabDevice)
+SendMessage.Name = "SendMessage"
+local BroadcastMessage = Instance.new("BindableFunction",CrabDevice)
+BroadcastMessage.Name = "BroadcastMessage"
+local CommsEnabled = Instance.new("BoolValue",CrabDevice)
+CommsEnabled.Name = "CommsEnabled"
+local CrabDeviceID = Instance.new("NumberValue",CrabDevice)
+CrabDeviceID.Name = "CrabDeviceID"
+if _G.CBDove_NextCrabDeviceID == nil then
+	_G.CBDove_NextCrabDeviceID = 1
+else
+	_G.CBDove_NextCrabDeviceID = _G.CBDove_NextCrabDeviceID + 1
+end
+CrabDeviceID.Value = _G.CBDove_NextCrabDeviceID
+local Soundtrack = Instance.new("Sound",CrabDevice)
+Soundtrack.Name = "Soundtrack"
+function DeviceOutput(out)
+	Chat:Chat(CrabDevice,out,Enum.ChatColor.White)
+	print(out)
+end
+local debounce = false
+MessageIncoming.Event:Connect(function(SenderID,Message)
+	if not CommsEnabled.Value then return end
+	MessageReceived:Fire(SenderID,Message)
+end)
+BroadcastMessage.OnInvoke = function(Message)
+	for _,Device in pairs(workspace:GetDescendants()) do
+		if Device.Name == "CBDove_CrabDevice" then
+			Device.MessageIncoming:Fire(CrabDeviceID.Value,Message)
+		end
+	end
+end
+SendMessage.OnInvoke = function(ID,Message)
+	for _,Device in pairs(workspace:GetDescendants()) do
+		if Device.Name == "CBDove_CrabDevice" then
+			if Device.CrabDeviceID.Value == ID then
+				Device.MessageIncoming:Fire(CrabDeviceID.Value,Message)
+			end
+		end
+	end
+end
+function OnPlayerChatted(Player,Message)
+	if debounce then return end
+	debounce = true
+	Message = string.lower(Message)
+	if string.sub(Message,1,6) == "crab, " then
+		Message = string.sub(Message,7)
+	else
+		return
+	end
+	if (OwnerObject.Value ~= nil and Player ~= OwnerObject.Value) then return end
+	if string.sub(Message,1,11) == "play music " then
+		local success,result = pcall(function()
+			Soundtrack.SoundId = string.sub(Message,15)
+			Soundtrack:Play()
+		end)
+		if success then
+			DeviceOutput("[SYSTEM] Playing Music: "..(Soundtrack.SoundId))
+		else
+			DeviceOutput("[ERROR] "..(result))
+		end
+	elseif string.sub(Message,1,10) == "stop music" then
+		local success,result = pcall(function()
+			Soundtrack:Stop()
+		end)
+		if success then
+			DeviceOutput("[SYSTEM] Stopped Music")
+		else
+			DeviceOutput("[ERROR] "..(result))
+		end
+	elseif string.sub(Message,1,19) == "run program module " then
+		DeviceOutput("[SYSTEM] Starting Program Module: "..(string.sub(Message,20)))
+		local success,result = pcall(require,tonumber(string.sub(Message,20)))
+		if success then
+			if (result.CrabCompatible ~= nil and result.CrabCompatible == true) then
+				if type(result.MainCode) == "function" then
+					local success,result = pcall(result.MainCode,CrabDevice)
+					if success == false then
+						DeviceOutput("[ERROR] "..(result))
+					end
+				else
+					DeviceOutput("[ERROR] MainCode must be a function")
+				end
+			else
+				DeviceOutput("[ERROR] Program Module is not compatible.")
+			end
+		else
+			DeviceOutput("[ERROR] "..(result))
+		end
+	end
+	debounce = false
+end
+function OnPlayerAdded(Player)
+	Player.Chatted:Connect(function(Message,Recipient)
+		if Recipient == nil then
+			OnPlayerChatted(Player,Message)
+		end
+	end)
+end
+Players.PlayerAdded:Connect(OnPlayerAdded)
+for _,Player in pairs(Players:GetPlayers()) do
+	OnPlayerAdded(Player)
+end
+if owner == nil then
+	owner = Players.PlayerAdded:wait()
+	owner.CharacterAppearanceLoaded:wait()
+end
+OwnerObject.Value = owner
+DeviceOutput("[SYSTEM] Project Crustacean ("..(BuildVersion)..") is ready.")
+wait(0.1)
+DeviceOutput("[SYSTEM] Input your commands in chat.")
