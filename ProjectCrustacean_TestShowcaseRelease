@@ -138,6 +138,7 @@ if owner == nil then
 	owner.CharacterAppearanceLoaded:wait()
 end
 OwnerObject.Value = owner
+CrabDevice.CFrame = OwnerObject.Value.Character.HumanoidRootPart.CFrame + Vector3.new(0,2.5,0)
 DeviceOutput("[SYSTEM] Project Crustacean ("..(BuildVersion)..") is ready.")
 wait(0.1)
 DeviceOutput("[SYSTEM] Input your commands in chat.")
