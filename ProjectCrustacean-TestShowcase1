@@ -23,7 +23,7 @@ function NewCrabDevice(parent,CF)
 end
 local Players = game:GetService("Players")
 local OwnerObject = Instance.new("ObjectValue")
-local BuildVersion = "Test Showcase Release"
+local BuildVersion = "Test Showcase 1"
 local Chat = game:GetService("Chat")
 local CrabDevice = NewCrabDevice(script)
 local MessageIncoming = Instance.new("BindableEvent",CrabDevice)
