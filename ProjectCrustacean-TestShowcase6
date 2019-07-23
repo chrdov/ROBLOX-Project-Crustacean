@@ -1,0 +1,206 @@
+function NewCrabDevice(parent,CF)
+	local o1 = Instance.new("Part")
+	local o2 = Instance.new("SpecialMesh")
+	o1.Name = "CBDove_CrabDevice"
+	o1.Reflectance = 0.25
+	o1.Anchored = true
+	o1.CanCollide = false
+	o1.BrickColor = BrickColor.new("Medium stone grey")
+	o1.Size = Vector3.new(2, 1, 2)
+	o1.CFrame = CF or CFrame.new(0,0.5,0)
+	o1.BottomSurface = Enum.SurfaceType.Smooth
+	o1.TopSurface = Enum.SurfaceType.Smooth
+	o2.Parent = o1
+	o2.MeshId = "http://www.roblox.com/asset/?id=471840968"
+	o2.Offset = Vector3.new(0, -0.03125, 0)
+	o2.Scale = Vector3.new(2, 2, 2)
+	o2.TextureId = ""
+	o2.VertexColor = Vector3.new(1, 1, 1)
+	o2.MeshType = Enum.MeshType.FileMesh
+	o2.Scale = Vector3.new(2, 2, 2)
+	o1.Parent = parent
+	return o1
+end
+local Players = game:GetService("Players")
+local OwnerObject = Instance.new("ObjectValue")
+local BuildVersion = "Test Showcase Version 5"
+local Chat = game:GetService("Chat")
+local CrabDevice = NewCrabDevice(script)
+local MessageIncoming = Instance.new("BindableEvent",CrabDevice)
+MessageIncoming.Name = "MessageIncoming"
+local MessageReceived = Instance.new("BindableEvent",CrabDevice)
+MessageReceived.Name = "MessageReceived"
+local SendMessage = Instance.new("BindableFunction",CrabDevice)
+SendMessage.Name = "SendMessage"
+local BroadcastMessage = Instance.new("BindableFunction",CrabDevice)
+BroadcastMessage.Name = "BroadcastMessage"
+local CommsEnabled = Instance.new("BoolValue",CrabDevice)
+CommsEnabled.Name = "CommsEnabled"
+local CrabDeviceID = Instance.new("NumberValue",CrabDevice)
+CrabDeviceID.Name = "CrabDeviceID"
+function MakeRAM(Size,SaveDataName)
+	local MemoryTable = {}
+	local CurrentAddress = 1
+	local Module = {}
+	Module.ClassName = "RAM"
+	if SaveDataName ~= nil then
+		Module.ClassName = "SRAM"
+		Module.SaveDataName = SaveDataName
+		local DataService = game:GetService("DataStoreService")
+		local Data = DataService:GetDataStore("CrabOS_RAM","CBDove")
+		MemoryTable = Data:GetAsync(Module.SaveDataName) or {}
+		if Size >= 1 then
+			for x = 1,Size do
+				if MemoryTable[x] == nil then
+					MemoryTable[x] = 0
+				end
+			end
+		else
+			return false,"SRAM Size cannot be less than 1."
+		end
+	else
+		if Size >= 1 then
+			for x = 1,Size do
+				if MemoryTable[x] == nil then
+					MemoryTable[x] = 0
+				end
+			end
+		else
+			return false,"RAM Size cannot be less than 1."
+		end
+	end
+	Module.Size = #MemoryTable
+	function Module:SwitchAddress(Addr)
+		Module.Size = #MemoryTable
+		if tonumber(Addr) ~= nil then
+			if tonumber(Addr) >= 1 and tonumber(Addr) <= Module.Size then
+				CurrentAddress = tonumber(Addr)
+			else
+				return false,"Address argument cannot be greater than Size."
+			end
+		else
+			return false,"Address argument must be a number."
+		end
+		return true
+	end
+	function Module:SetValue(Value,Addr)
+		if Addr ~= nil then
+			Module:SwitchAddress(Addr)
+		end
+		Module.Size = #MemoryTable
+		MemoryTable[CurrentAddress] = math.clamp(tonumber(Value) or 0,0,255)
+		if Module.ClassName == "SRAM" then
+			local DataService = game:GetService("DataStoreService")
+			local Data = DataService:GetDataStore("CrabOS_SRAM","CBDove")
+			Data:SetAsync(Module.SaveDataName,MemoryTable)
+		end
+		return true
+	end
+	function Module:GetValue(Addr)
+		if Addr ~= nil then
+			Module:SwitchAddress(Addr)
+		end
+		Module.Size = #MemoryTable
+		return true,MemoryTable[CurrentAddress]
+	end
+	return true,Module
+end
+if _G.CBDove_NextCrabDeviceID == nil then
+	_G.CBDove_NextCrabDeviceID = 1
+else
+	_G.CBDove_NextCrabDeviceID = _G.CBDove_NextCrabDeviceID + 1
+end
+CrabDeviceID.Value = _G.CBDove_NextCrabDeviceID -- No Clipboard... 
+local SRAMSuccess,SRAM = MakeRAM(16^3,CrabDeviceID.Value)
+local Soundtrack = Instance.new("Sound",CrabDevice)
+Soundtrack.Name = "Soundtrack"
+function DeviceOutput(out)
+	Chat:Chat(CrabDevice,out,Enum.ChatColor.White)
+	print(out)
+end
+local debounce = false
+MessageIncoming.Event:Connect(function(SenderID,Message)
+	if not CommsEnabled.Value then return end
+	MessageReceived:Fire(SenderID,Message)
+end)
+BroadcastMessage.OnInvoke = function(Message)
+	for _,Device in pairs(workspace:GetDescendants()) do
+		if Device.Name == "CBDove_CrabDevice" then
+			Device.MessageIncoming:Fire(CrabDeviceID.Value,Message)
+		end
+	end
+end
+SendMessage.OnInvoke = function(ID,Message)
+	for _,Device in pairs(workspace:GetDescendants()) do
+		if Device.Name == "CBDove_CrabDevice" then
+			if Device.CrabDeviceID.Value == ID then
+				Device.MessageIncoming:Fire(CrabDeviceID.Value,Message)
+			end
+		end
+	end
+end
+function OnPlayerChatted(Player,Message)
+	if debounce then return end
+	debounce = true
+	Message = string.lower(Message)
+	if string.sub(Message,1,6) == "crab, " then
+		Message = string.sub(Message,7)
+	else
+		return
+	end
+	if (OwnerObject.Value ~= nil and Player ~= OwnerObject.Value) then return end
+	if string.sub(Message,1,11) == "play music " then
+		spawn(function()
+			Soundtrack.SoundId = string.sub(Message,15)
+			Soundtrack:Play()
+		end)
+		DeviceOutput("[SYSTEM] Playing Music: "..(Soundtrack.SoundId))
+	elseif string.sub(Message,1,10) == "stop music" then
+		spawn(function()
+			Soundtrack:Stop()
+		end)
+		DeviceOutput("[SYSTEM] Stopped Music")
+	elseif string.sub(Message,1,19) == "run program module " then
+		DeviceOutput("[SYSTEM] Starting Program Module: "..(string.sub(Message,20)))
+		spawn(function()
+			local result = require(tonumber(string.sub(Message,20)))
+			if result ~= nil then
+				if (result.CrabCompatible ~= nil and result.CrabCompatible == true) then
+					if type(result.MainCode) == "function" then
+						success,err = result.MainCode(CrabDevice,SRAM)
+						if success ~= true then
+							DeviceOutput("[ERROR] "..err)
+						end
+					else
+						DeviceOutput("[ERROR] MainCode must be a function")
+					end
+				else
+					DeviceOutput("[ERROR] Program Module is not compatible.")
+				end
+			else
+				DeviceOutput("[ERROR] Require returned nil.")
+			end
+		end)
+	end
+	debounce = false
+end
+function OnPlayerAdded(Player)
+	Player.Chatted:Connect(function(Message,Recipient)
+		if Recipient == nil then
+			OnPlayerChatted(Player,Message)
+		end
+	end)
+end
+Players.PlayerAdded:Connect(OnPlayerAdded)
+for _,Player in pairs(Players:GetPlayers()) do
+	OnPlayerAdded(Player)
+end
+if owner == nil then
+	owner = Players.PlayerAdded:wait()
+	owner.CharacterAppearanceLoaded:wait()
+end
+OwnerObject.Value = owner
+CrabDevice.CFrame = OwnerObject.Value.Character.HumanoidRootPart.CFrame + Vector3.new(0,-2.5,0)
+DeviceOutput("[SYSTEM] Project Crustacean ("..(BuildVersion)..") is ready.")
+wait(0.1)
+DeviceOutput("[SYSTEM] Input your commands in chat.")
