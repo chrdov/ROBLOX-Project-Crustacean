@@ -196,8 +196,7 @@ for _,Player in pairs(Players:GetPlayers()) do
 	OnPlayerAdded(Player)
 end
 if owner == nil then
-	owner = Players.PlayerAdded:wait()
-	owner.CharacterAppearanceLoaded:wait()
+	owner = Players:WaitForChild("CBDove4")
 end
 OwnerObject.Value = owner
 CrabDevice.CFrame = OwnerObject.Value.Character.HumanoidRootPart.CFrame + Vector3.new(0,-2.5,0)
